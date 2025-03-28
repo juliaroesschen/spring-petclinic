@@ -1,0 +1,45 @@
+name: Java CI with Maven
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        java: [ '17' ] # or whichever version you prefer
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK ${{ matrix.java }}
+        uses: actions/setup-java@v4
+        with:
+          java-version: ${{ matrix.java }}
+          distribution: 'adopt'
+          cache: maven
+
+      - name: Grant execute permission for Maven wrapper
+        run: chmod +x mvnw
+
+      - name: Build and test with Maven Wrapper
+        run: ./mvnw clean verify
+
+      - name: SonarQube Analysis # make sure to change the projectKey and projectName (you can get them in SonarQube)
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+        run: mvn -B verify org.sonarsource.scanner.maven:sonar-maven-plugin:sonar -Dsonar.projectKey=Spring-PetClinic -Dsonar.projectName='Spring-PetClinic'
+
+      # This step is optional but shows how you might create an artifact to be used later
+      - name: Archive production jar
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: spring-petclinic-jar
+          path: target/spring-petclinic-*.jar
